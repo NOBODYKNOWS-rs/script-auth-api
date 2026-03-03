@@ -1,0 +1,42 @@
+const express = require("express");
+const fs = require("fs");
+const cors = require("cors");
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+const PORT = process.env.PORT || 3000;
+
+function loadKeys() {
+    return JSON.parse(fs.readFileSync("./keys.json"));
+}
+
+function saveKeys(data) {
+    fs.writeFileSync("./keys.json", JSON.stringify(data, null, 2));
+}
+
+app.post("/verify", (req, res) => {
+    const { key, hwid } = req.body;
+    const data = loadKeys();
+
+    if (!data[key]) {
+        return res.json({ success: false, message: "Invalid key" });
+    }
+
+    if (!data[key].hwid) {
+        data[key].hwid = hwid;
+        saveKeys(data);
+        return res.json({ success: true, message: "HWID bound" });
+    }
+
+    if (data[key].hwid === hwid) {
+        return res.json({ success: true, message: "Access granted" });
+    }
+
+    return res.json({ success: false, message: "HWID mismatch" });
+});
+
+app.listen(PORT, () => {
+    console.log("Server running on port", PORT);
+});
